@@ -8,36 +8,48 @@ import requests
 [Usage]
 These variable can be replaced:
 
-ChangeLogGen_htmlOutputToFile       OPTIONAL    You are able to save the converted html file. (default: true)
-ChangeLogGen_changeLogTemplate      OPTIONAL    You can have your own changelog template (default: ./ChangeLogTemplate.md)
-ChangeLogGen_ChangeLogFile          REQUIRED    Path to the Changelog.md (default: ./CHANGELOG.md)
-ChangeLogGen_htmlFile               REQUIRED    Converted changelog to html. (default: CHANGELOG.html)
-ChangeLogGen_headerTag              REQUIRED    Header tag which is used in changelog template. (default: [header])
-ChangeLogGen_footerTag              REQUIRED    Footer tag which is used in changelog template. (default: [footer])
-ChangeLogGen_confluenceURL          REQUIRED    Confluence url.(default: http://lkwconfluence.lkw-walter.com)
-ChangeLogGen_confluenceSpace        REQUIRED    Cofluence space which you want to create/update the page.
-ChangeLogGen_confluencePageTitle    REQUIRED    Confluence page which you want to put your changelog.
-ChangeLogGen_confluenceApiKey       REQUIRED    Confluence api key.
+ChangeLogPub_htmlOutputToFile       OPTIONAL    You are able to save the converted html file. (default: true)
+ChangeLogPub_changeLogTemplate      OPTIONAL    You can have your own changelog template (default: ./ChangeLog_Template.md)
+ChangeLogPub_ChangeLogFile          REQUIRED    Path to the Changelog.md (default: ./CHANGELOG.md)
+ChangeLogPub_htmlFile               REQUIRED    Converted changelog to html. (default: CHANGELOG.html)
+ChangeLogPub_headerTag              REQUIRED    Header tag which is used in changelog template file. (default: [header])
+ChangeLogPub_footerTag              REQUIRED    Footer tag which is used in changelog template file. (default: [footer])
+ChangeLogPub_confluenceURL          REQUIRED    Confluence url.(default: http://confluence-server.com)
+ChangeLogPub_confluenceSpace        REQUIRED    Cofluence space which you want to create/update the page.
+ChangeLogPub_confluencePageTitle    REQUIRED    Confluence page which you want to put your changelog.
+ChangeLogPub_confluenceApiKey       REQUIRED    Confluence api key.
 
 You don't need to specify ariables with default value.
 """
 
-changeloghtml_outputToFile = os.environ.get('ChangeLogGen_htmlOutputToFile','true')
-changeLogTemplate_filePath = os.environ.get('ChangeLogGen_changeLogTemplate', 'ChangeLogTemplate.md')
-changeLog_filePath = os.environ.get('ChangeLogGen_changeLogFile', 'CHANGELOG.md')
-changeLogHtml_filePath = os.environ.get('ChangeLogGen_htmlFile', 'CHANGELOG.html')
-start_string = os.environ.get('ChangeLogGen_headerTag','[header]')
-end_string = os.environ.get('ChangeLogGen_footerTag','[footer]')
-confluence_url = os.environ.get('ChangeLogGen_confluenceURL', 'http://confluence-server.com')
-confluence_space = os.environ.get('ChangeLogGen_confluenceSpace', 'DEVOPS')
-confluence_pageTitle = os.environ.get('ChangeLogGen_confluencePageTitle', 'test-application')
-confluence_apiKey = os.environ.get('ChangeLogGen_confluenceApiKey', 'TEST')
+changeloghtml_outputToFile = os.environ.get('ChangeLogPub_htmlOutputToFile','false')
+changeLogTemplate_filePath = os.environ.get('ChangeLogPub_changeLogTemplate', 'ChangeLogTemplate.md')
+changeLog_filePath = os.environ.get('ChangeLogPub_changeLogFile', 'CHANGELOG.md')
+changeLogHtml_filePath = os.environ.get('ChangeLogPub_htmlFile', 'CHANGELOG.html')
+start_string = os.environ.get('ChangeLogPub_headerTag','[header]')
+end_string = os.environ.get('ChangeLogPub_footerTag','[footer]')
+confluence_url = os.environ.get('ChangeLogPub_confluenceURL', 'http://confluence-server.com')
+confluence_space = os.environ.get('ChangeLogPub_confluenceSpace')
+confluence_pageTitle = os.environ.get('ChangeLogPub_confluencePageTitle')
+confluence_apiKey = os.environ.get('ChangeLogPub_confluenceApiKey')
+
+if not confluence_space:
+  print("[ERROR]: Please specify confluence space first by defining this variable: ChangeLogPub_confluenceSpace")
+  sys.exit()
+
+if not confluence_pageTitle:
+  print("[ERROR]: Please specify confluence page first by defining this variable: ChangeLogPub_confluencePageTitle")
+  sys.exit()
+
+if not confluence_apiKey:
+  print("[ERROR]: Please specify confluence api key first by defining this variable: ChangeLogPub_confluenceApiKey")
+  sys.exit()
 
 if not os.path.exists(changeLog_filePath):
   print(f"[ERROR]: The {changeLog_filePath} doesn't exist, make sure to run git-changelog first.")
   sys.exit()
 
-if os.path.exists(changeLogHtml_filePath):
+if os.path.exists(changeLogHtml_filePath) and changeloghtml_outputToFile == 'true':
   print(f"[ERROR]: The {changeLogHtml_filePath} is already exist.")
   sys.exit()
 
@@ -232,8 +244,12 @@ def upload_to_confluence(changeLogConfluenceCompatible,confluence_apiKey, conflu
     print(f"[ERROR]: Cannot get information about this page: {confluence_pageTitle}, you can make sure if the inputs are correct: space={confluence_space}, params={params}")
     return 1
 
-header_content = read_content_between_strings(changeLogTemplate_filePath, start_string, end_string)
-footer_content = read_content_between_strings(changeLogTemplate_filePath, end_string, "end_of_file")
+if os.path.exists(releaseNotesTemplate_filePath):
+  header_content = read_content_between_strings(releaseNotesTemplate_filePath, start_string, end_string)
+  footer_content = read_content_between_strings(releaseNotesTemplate_filePath, end_string, "end_of_file")
+else:
+  header_content = ""
+  footer_content = ""
 
 changeLogHtmlConverted = convert_to_html(changeLog_filePath,changeLogHtml_filePath)
 newChangeLog_file = add_header_footer(changeLogHtmlConverted,header_content,footer_content)
